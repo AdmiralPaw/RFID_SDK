@@ -7,6 +7,7 @@ import data.Antenna
 import data.BrmItemData
 import de.feig.fedm.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -22,13 +23,21 @@ class NotifyManager(
     private val keepAlive = false // Set Keep-Alive on/off
     private var offTrigger = true
 
-    var itemList = mutableStateListOf<BrmItemData>(
-        BrmItemData(idd = "E1040102401230021304012314125123").apply { antennas.add(Antenna(123)) }
+    val itemList = mutableStateListOf<BrmItemData>(
+        BrmItemData(idd = "E1040102401230021304012314125123").apply { antennas.add(Antenna(123)) },
+        BrmItemData(idd = "E10402314125123").apply { antennas.add(Antenna(123)) },
+        BrmItemData(idd = "E10401012314125123").apply { antennas.add(Antenna(123)) },
+        BrmItemData(idd = "E104010240104012314125123").apply { antennas.add(Antenna(123)) },
+        BrmItemData(idd = "E1040102401230021304012314125123").apply { antennas.add(Antenna(123)) },
+        BrmItemData(idd = "E10401024004012314125123").apply { antennas.add(Antenna(123)) },
+        BrmItemData(idd = "E1040102401230021304012314125123").apply { antennas.add(Antenna(123)) },
+        BrmItemData(idd = "E10414125123").apply { antennas.add(Antenna(123)) },
+        BrmItemData(idd = "E104010240123002125123").apply { antennas.add(Antenna(123)) },
     )
 
     fun start() {
         offTrigger = true
-        coroutineScope.launch { run() }
+        coroutineScope.launch(Dispatchers.IO) { run() }
     }
 
     private suspend fun run() {

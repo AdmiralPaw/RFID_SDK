@@ -1,22 +1,24 @@
 import androidx.compose.desktop.DesktopMaterialTheme
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.GridCells
 import androidx.compose.foundation.lazy.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import data.BrmItemData
 import kotlinx.coroutines.Dispatchers
-import notify.NotifyManager
 import kotlin.system.exitProcess
 
 
@@ -33,7 +35,10 @@ fun brmItem(item: BrmItemData) {
                 Text(
                     text = item.idd.toString(),
                     modifier = Modifier.padding(bottom = 2.dp),
-                    style = MaterialTheme.typography.body1.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.body1.copy(fontWeight = FontWeight.Bold),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1
+
                 )
                 item.rssiList?.forEach { rssi ->
                     Text(
@@ -62,38 +67,22 @@ fun configParamChanger(configName: String, configValue: MutableState<String>) {
             label = { Text(configName) },
             value = configValue.value,
             onValueChange = { configValue.value = it },
-//            modifier = Modifier.height(28.dp).background(Color.Gray)
         )
     }
 }
 
 
-data class AntennaConfig(
-    val outputPower: MutableState<String>,
-    val RSSIFilter: MutableState<String>
-)
-
-data class ReaderConfig(
-    val antennas: List<AntennaConfig>
-)
-
 @Composable
-fun settingsColumn(nm: NotifyManager) {
+fun settingsColumn(rM: ReaderManager) {
     Column(modifier = Modifier.width(200.dp).padding(16.dp), horizontalAlignment = Alignment.Start) {
-        val rC = ReaderConfig(
-            listOf(
-                AntennaConfig(remember { mutableStateOf("") }, remember { mutableStateOf("") }),
-                AntennaConfig(remember { mutableStateOf("") }, remember { mutableStateOf("") })
-            )
-        )
         Text("Antenna 1:")
-        configParamChanger("OutputPower (W)", rC.antennas[0].outputPower)
-        configParamChanger("RSSIFilter", rC.antennas[0].RSSIFilter)
+        configParamChanger("OutputPower (W)", rM.rC.antennas[0].outputPower)
+        configParamChanger("RSSIFilter", rM.rC.antennas[0].RSSIFilter)
         Text("Antenna 2:")
-        configParamChanger("OutputPower (W)", rC.antennas[1].outputPower)
-        configParamChanger("RSSIFilter", rC.antennas[1].RSSIFilter)
+        configParamChanger("OutputPower (W)", rM.rC.antennas[1].outputPower)
+        configParamChanger("RSSIFilter", rM.rC.antennas[1].RSSIFilter)
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { println("stub!") }) { Text("Apply") }
+        Button(onClick = { rM.applyAntennasConfig() }) { Text("Apply") }
     }
 }
 
@@ -101,32 +90,96 @@ fun settingsColumn(nm: NotifyManager) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 @Preview
-fun App(text: MutableState<String>, debugText: MutableState<String>, nm: NotifyManager) {
+fun App(text: MutableState<String>, debugText: MutableState<String>, rM: ReaderManager) {
     DesktopMaterialTheme {
         Row(
             modifier = Modifier.fillMaxSize(),
         ) {
-            Column {
-                var buttonText by remember { mutableStateOf("") }
-                Text("Listening:")
+            Column(modifier = Modifier.width(180.dp).padding(top = 16.dp, end = 16.dp)) {
+                var nMbutton by remember { mutableStateOf("Stop") }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Listening")
+                    Canvas(modifier = Modifier.size(12.dp), onDraw = {
+                        if (nMbutton == "Stop") {
+                            drawCircle(color = Color(0, 168, 107))
+                        } else {
+                            drawCircle(color = Color(168, 0, 50))
+                        }
+                    })
+                }
                 Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp),
                     onClick = {
-                        buttonText = if (buttonText == "Stop") {
-                            nm.stop()
+                        nMbutton = if (nMbutton == "Stop") {
+                            rM.notifyManager.stop()
                             "Start"
                         } else {
-                            nm.start()
+                            rM.notifyManager.start()
                             "Stop"
                         }
                     }) {
-                    Text(buttonText)
+                    Text(nMbutton)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                var connectionState by remember { mutableStateOf("Connect") }
+                var enabled by remember { mutableStateOf(true) }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("TCP Connection")
+                    Canvas(modifier = Modifier.size(12.dp), onDraw = {
+                        if (rM.connectionState.value == 1) {
+                            drawCircle(color = Color(0, 168, 107))
+                        } else {
+                            drawCircle(color = Color(168, 0, 50))
+                        }
+                    })
                 }
 
-                Text(
-                    text = debugText.value,
-                    modifier = Modifier.padding(8.dp).width(256.dp),
-                    color = MaterialTheme.colors.secondary
+                var readerIp by remember { mutableStateOf("192.168.10.10") }
+                TextField(
+                    label = { Text("Reader IP") },
+                    shape = RoundedCornerShape(topEnd = 20.dp),
+                    value = readerIp,
+                    onValueChange = { readerIp = it },
                 )
+
+                var readerPort by remember { mutableStateOf("10001") }
+                TextField(
+                    shape = RectangleShape,
+                    label = { Text("Reader Port") },
+                    value = readerPort,
+                    onValueChange = { readerPort = it },
+                )
+//                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(bottomEnd = 20.dp),
+                    enabled = enabled,
+                    onClick = {
+                        connectionState = if (rM.connectionState.value == -1) {
+                            rM.connect(readerIp, readerPort.toInt())
+                            enabled = false
+                            rM.connectionState.value = 0
+                            "Connection..."
+                        } else {
+                            rM.disconnect()
+                            "Disconnect"
+                        }.toString()
+                    }) {
+                    if (rM.connectionState.value != 0) {
+                        enabled = true
+                    }
+                    Text(connectionState)
+                }
             }
             Surface(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -136,12 +189,12 @@ fun App(text: MutableState<String>, debugText: MutableState<String>, nm: NotifyM
                     cells = GridCells.Adaptive(minSize = 256.dp),
                     modifier = Modifier.padding(8.dp)
                 ) {
-                    items(nm.itemList) {
-                        brmItem(it)
+                    rM.notifyManager.itemList.forEach {
+                        item { brmItem(it) }
                     }
                 }
             }
-            settingsColumn(nm)
+            settingsColumn(rM)
         }
     }
 }
@@ -153,18 +206,26 @@ fun main() = application {
     val coroutineScope = rememberCoroutineScope { Dispatchers.IO }
     val antennaTimeoutMs = remember { mutableStateOf(3000L) }
 
-    val nm = NotifyManager(debugText, coroutineScope, antennaTimeoutMs)
+    val connectionState = remember { mutableStateOf(-1) }
 
-//    val backJob = coroutineScope.launch { basicTCPConnect(text) }
-    nm.start()
+    val rC = ReaderConfigure(
+        listOf(
+            AntennaConfig(remember { mutableStateOf("") }, remember { mutableStateOf("") }),
+            AntennaConfig(remember { mutableStateOf("") }, remember { mutableStateOf("") })
+        )
+    )
+
+    val rM = ReaderManager(debugText, coroutineScope, antennaTimeoutMs, connectionState, rC)
 
     fun onClose() {
         exitApplication()
-        nm.stop()
+        rM.stop()
         exitProcess(0)
     }
-    Window(onCloseRequest = ::onClose) {
-        App(text, debugText, nm)
+    Window(onCloseRequest = ::onClose, title = "Reader Tool") {
+        App(text, debugText, rM)
     }
+
+    rM.start()
 }
 
