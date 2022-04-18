@@ -5,6 +5,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.GridCells
 import androidx.compose.foundation.lazy.LazyVerticalGrid
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import data.Antenna
 import data.BrmItemData
 import kotlinx.coroutines.Dispatchers
 import kotlin.system.exitProcess
@@ -189,8 +191,8 @@ fun App(text: MutableState<String>, debugText: MutableState<String>, rM: ReaderM
                     cells = GridCells.Adaptive(minSize = 256.dp),
                     modifier = Modifier.padding(8.dp)
                 ) {
-                    rM.notifyManager.itemList.forEach {
-                        item { brmItem(it) }
+                    items(rM.notifyManager.itemList) {
+                        brmItem(it)
                     }
                 }
             }
@@ -207,7 +209,21 @@ fun main() = application {
     val antennaTimeoutMs = remember { mutableStateOf(3000L) }
 
     val connectionState = remember { mutableStateOf(-1) }
-
+//    val itemList = remember {
+//        mutableStateOf<List<BrmItemData>>(
+//            listOf(
+//                BrmItemData(idd = "E1040102401230021304012314125123").apply { antennas.add(Antenna(123)) },
+//                BrmItemData(idd = "E10402314125123").apply { antennas.add(Antenna(123)) },
+//                BrmItemData(idd = "E10401012314125123").apply { antennas.add(Antenna(123)) },
+//                BrmItemData(idd = "E104010240104012314125123").apply { antennas.add(Antenna(123)) },
+//                BrmItemData(idd = "E1040102401230021304012314125123").apply { antennas.add(Antenna(123)) },
+//                BrmItemData(idd = "E10401024004012314125123").apply { antennas.add(Antenna(123)) },
+//                BrmItemData(idd = "E1040102401230021304012314125123").apply { antennas.add(Antenna(123)) },
+//                BrmItemData(idd = "E10414125123").apply { antennas.add(Antenna(123)) },
+//                BrmItemData(idd = "E104010240123002125123").apply { antennas.add(Antenna(123)) },
+//            )
+//        )
+//    }
     val rC = ReaderConfigure(
         listOf(
             AntennaConfig(remember { mutableStateOf("") }, remember { mutableStateOf("") }),

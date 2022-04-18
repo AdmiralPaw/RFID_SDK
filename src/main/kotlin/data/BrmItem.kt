@@ -1,6 +1,7 @@
 package data
 
 import kotlinx.coroutines.Job
+import java.util.*
 
 data class BrmDate(
     val day: Int,
@@ -43,7 +44,7 @@ data class DeviceInfo(
 
 data class Antenna(
     val id: Long?,
-    var timeout: Job? = null
+    var timeout: Long = Date().time
 )
 
 data class BrmItemData(

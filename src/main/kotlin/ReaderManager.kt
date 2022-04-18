@@ -1,4 +1,5 @@
 import androidx.compose.runtime.MutableState
+import data.BrmItemData
 import de.feig.fedm.Connector
 import de.feig.fedm.ErrorCode
 import de.feig.fedm.ReaderModule
@@ -24,6 +25,7 @@ class ReaderManager(
     private val coroutineScope: CoroutineScope,
     private val antennaTimeoutMs: MutableState<Long>,
     var connectionState: MutableState<Int>,
+//    var itemList: MutableState<List<BrmItemData>>,
     val rC: ReaderConfigure
 ) {
     val reader = ReaderModule(RequestMode.UniDirectional)
